@@ -6,16 +6,16 @@
 /* This is a decoder for a rotary encoder that has the following pattern for each tick rotated clockwise:
  * (A is the pin to the left, B is the pin to the right. The middle pin is connected to ground.)
  *
- *     ----------    ---------
- *  A           |    |
- *              ------
+ *     -----    --------------
+ *  A      |    |
+ *         ------
  *
  *     -----         ---------
  *  B      |         |
  *         -----------
  *
  * Signal:
- *     AB    A    0     AB
+ *     AB    0    B     AB
  */
 class decoder_foo_t {
 private:
@@ -52,14 +52,14 @@ public:
         break;
       case NEUTRAL:
         // The neutral state, where we wait for the user to start turning the button.
-        if (new_signal == SIGNAL_A) {
+        if (new_signal == SIGNAL_0) {
           this->current_state = MOVING_CLOCKWISE_1;
-        } else if (new_signal == SIGNAL_0) {
+        } else if (new_signal == SIGNAL_B) {
           this->current_state = MOVING_COUNTERCLOCKWISE_1;
         }
         break;
       case MOVING_CLOCKWISE_1:
-        if (new_signal == SIGNAL_0) {
+        if (new_signal == SIGNAL_B) {
           this->current_state = MOVING_CLOCKWISE_2;
         } else if (new_signal == SIGNAL_AB) {
           this->current_state = NEUTRAL;
@@ -69,12 +69,12 @@ public:
         if (new_signal == SIGNAL_AB) {
           this->current_state = NEUTRAL;
           this->pulser->pulse_clockwise();
-        } else if (new_signal == SIGNAL_A) {
+        } else if (new_signal == SIGNAL_0) {
           this->current_state = MOVING_CLOCKWISE_1;
         }
         break;
       case MOVING_COUNTERCLOCKWISE_1:
-        if (new_signal == SIGNAL_A) {
+        if (new_signal == SIGNAL_0) {
           this->current_state = MOVING_COUNTERCLOCKWISE_2;
         } else if (new_signal == SIGNAL_AB) {
           this->current_state = NEUTRAL;
@@ -84,7 +84,7 @@ public:
         if (new_signal == SIGNAL_AB) {
           this->current_state = NEUTRAL;
           this->pulser->pulse_counterclockwise();
-        } else if (new_signal == SIGNAL_0) {
+        } else if (new_signal == SIGNAL_B) {
           this->current_state = MOVING_COUNTERCLOCKWISE_1;
         }
         break;
