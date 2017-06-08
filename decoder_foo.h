@@ -16,7 +16,6 @@
  *
  * Signal:
  *     AB    A    0     AB
-
  */
 class decoder_foo_t {
 private:
