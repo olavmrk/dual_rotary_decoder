@@ -3,20 +3,20 @@
 #include "blinker.h"
 #include "rotation_pulser.h"
 
-/* This is a decoder for a rotary encoder that changes between three signals when it is rotated.
- * It has the following states, where each state is the result of one position on the encoder:
- * (A is the pin to the left, B is the pin to the rigth. The middle pin is connected to ground.)
+/* This is a decoder for a rotary encoder that alternates between two states when it is rotated.
+ * In order to determine the direction we look at which signal changes first. On clockwise rotation
+ * signal "A" changes first:
  *
- *         ------------
- *  A      |          |
- *     -----          -----
+ *         ----------
+ *  A      |        |
+ *     -----        -------
  *
- *               ------
- *  B            |    |
- *     -----------    |----
+ *           ----------
+ *  B        |        |
+ *     -------        |----
  *
  * Signal:
- *      0    A     AB   0
+ *      0   A  AB    B  0
  */
 class decoder_bar_t {
 private:
@@ -26,14 +26,14 @@ private:
 
   enum decoder_state_t {
     RESET,
-    ONE,
-    TWO,
-    THREE,
+    X,
+    X_CLOCKWISE,
+    X_COUNTERCLOCKWISE,
+    Y,
+    Y_CLOCKWISE,
+    Y_COUNTERCLOCKWISE,
   } current_state;
 
-  static const unsigned SIGNAL_POS_ONE = SIGNAL_0;
-  static const unsigned SIGNAL_POS_TWO = SIGNAL_A;
-  static const unsigned SIGNAL_POS_THREE = SIGNAL_AB;
 public:
   void setup(ab_reader_t &reader, rotation_pulser_t &pulser, blinker_t &state_change_blinker) {
     this->reader = &reader;
@@ -48,39 +48,60 @@ public:
     switch (this->current_state) {
       case RESET:
         // State at reset. We don't know what position the encoder is in, so wait for a stable signal from it.
-        if (new_signal == SIGNAL_POS_ONE) {
-          this->current_state = ONE;
-        } else if (new_signal == SIGNAL_POS_TWO) {
-          this->current_state = TWO;
-        } else if (new_signal == SIGNAL_POS_THREE) {
-          this->current_state = THREE;
+        if (new_signal == SIGNAL_0) {
+          this->current_state = X;
+        } else if (new_signal == SIGNAL_AB) {
+          this->current_state = Y;
         }
         break;
-      case ONE:
-        if (new_signal == SIGNAL_POS_TWO) {
-          this->current_state = TWO;
-          this->pulser->pulse_clockwise();
-        } else if (new_signal == SIGNAL_POS_THREE) {
-          this->current_state = THREE;
-          this->pulser->pulse_counterclockwise();
+      case X:
+        if (new_signal == SIGNAL_A) {
+          this->current_state = X_CLOCKWISE;
+        } else if (new_signal == SIGNAL_B) {
+          this->current_state = X_COUNTERCLOCKWISE;
+        } else if (new_signal == SIGNAL_AB) {
+          this->current_state = Y; // We missed a signal, but don't know which direction we turned.
         }
         break;
-      case TWO:
-        if (new_signal == SIGNAL_POS_THREE) {
-          this->current_state = THREE;
+      case X_CLOCKWISE:
+        if (new_signal == SIGNAL_AB) {
+          this->current_state = Y;
           this->pulser->pulse_clockwise();
-        } else if (new_signal == SIGNAL_POS_ONE) {
-          this->current_state = ONE;
-          this->pulser->pulse_counterclockwise();
+        } else if (new_signal == SIGNAL_0) {
+          this->current_state = X;
         }
         break;
-      case THREE:
-        if (new_signal == SIGNAL_POS_ONE) {
-          this->current_state = ONE;
-          this->pulser->pulse_clockwise();
-        } else if (new_signal == SIGNAL_POS_TWO) {
-          this->current_state = TWO;
+      case X_COUNTERCLOCKWISE:
+        if (new_signal == SIGNAL_AB) {
+          this->current_state = Y;
           this->pulser->pulse_counterclockwise();
+        } else if (new_signal == SIGNAL_0) {
+          this->current_state = X;
+        }
+        break;
+      case Y:
+        if (new_signal == SIGNAL_B) {
+          this->current_state = Y_CLOCKWISE;
+        } else if (new_signal == SIGNAL_A) {
+          this->current_state = Y_COUNTERCLOCKWISE;
+        } else if (new_signal == SIGNAL_0) {
+          this->current_state = X; // We missed a signal, but don't know which direction we turned.
+        }
+        break;
+      case Y_CLOCKWISE:
+        if (new_signal == SIGNAL_0) {
+          this->current_state = X;
+          this->pulser->pulse_clockwise();
+        } else if (new_signal == SIGNAL_AB) {
+          this->current_state = Y;
+        }
+        break;
+      case Y_COUNTERCLOCKWISE:
+        if (new_signal == SIGNAL_0) {
+          this->current_state = X;
+          this->pulser->pulse_counterclockwise();
+        } else if (new_signal == SIGNAL_AB) {
+          this->current_state = Y;
         }
         break;
     }
