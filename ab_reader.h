@@ -30,7 +30,7 @@ public:
     this->pin_b = pin_b;
     pinMode(this->pin_a, INPUT_PULLUP);
     pinMode(this->pin_b, INPUT_PULLUP);
-    this->debouncer.setup(SIGNAL_RESET, 5);
+    this->debouncer.setup(SIGNAL_RESET, 1);
   }
 
   unsigned read() {
